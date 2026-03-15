@@ -17,14 +17,23 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
+    console.log("FULL WEBHOOK PAYLOAD:", JSON.stringify(body, null, 2));
+
     if (body.event_type !== "message.received") {
       return Response.json({ ok: true });
     }
 
     const message = body.message;
     if (!message) {
+      console.log("No message in payload");
       return Response.json({ ok: true });
     }
+
+    console.log("message_id:", JSON.stringify(message.message_id));
+    console.log("message_id type:", typeof message.message_id);
+    console.log("subject:", JSON.stringify(message.subject));
+    console.log("text type:", typeof message.text);
+    console.log("extracted_text type:", typeof message.extracted_text);
 
     const messageId = message.message_id;
     const subject = message.subject || "(no subject)";
@@ -33,6 +42,8 @@ export async function POST(req) {
     if (!emailBody.trim()) {
       return Response.json({ ok: true });
     }
+
+    console.log("Calling Claude...");
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
@@ -47,11 +58,17 @@ export async function POST(req) {
     });
 
     const reply = response.content[0].text;
+    console.log("Claude replied, length:", reply.length);
+
+    console.log("Sending reply via AgentMail...");
+    console.log("INBOX_ID:", INBOX_ID, "type:", typeof INBOX_ID);
+    console.log("messageId:", messageId, "type:", typeof messageId);
 
     await agentmail.inboxes.messages.reply(INBOX_ID, messageId, {
       text: reply,
     });
 
+    console.log("Reply sent successfully");
     return Response.json({ ok: true });
   } catch (err) {
     console.error("Webhook error:", err);
