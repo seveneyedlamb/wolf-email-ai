@@ -17,7 +17,6 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    // Only process incoming messages
     if (body.event_type !== "message.received") {
       return Response.json({ ok: true });
     }
@@ -35,7 +34,6 @@ export async function POST(req) {
       return Response.json({ ok: true });
     }
 
-    // Call Claude
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
@@ -50,10 +48,7 @@ export async function POST(req) {
 
     const reply = response.content[0].text;
 
-    // Reply via AgentMail
-    await agentmail.inboxes.messages.reply({
-      inboxId: INBOX_ID,
-      messageId: messageId,
+    await agentmail.inboxes.messages.reply(INBOX_ID, messageId, {
       text: reply,
     });
 
